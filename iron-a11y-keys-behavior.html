@@ -8,7 +8,7 @@ Code distributed by Google as part of the polymer project is also
 subject to an additional IP rights grant found at http://polymer.github.io/PATENTS.txt
 -->
 
-<link rel="import" href="../polymer/polymer.html">
+<link rel="import" href="../polymer/polymer-element.html">
 
 <script>
   (function() {
@@ -269,231 +269,244 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
      * @demo demo/index.html
      * @polymerBehavior
      */
-    Polymer.IronA11yKeysBehavior = {
-      properties: {
-        /**
-         * The EventTarget that will be firing relevant KeyboardEvents. Set it to
-         * `null` to disable the listeners.
-         * @type {?EventTarget}
-         */
-        keyEventTarget: {
-          type: Object,
-          value: function() {
-            return this;
-          }
-        },
-
-        /**
-         * If true, this property will cause the implementing element to
-         * automatically stop propagation on any handled KeyboardEvents.
-         */
-        stopKeyboardEventPropagation: {
-          type: Boolean,
-          value: false
-        },
-
-        _boundKeyHandlers: {
-          type: Array,
-          value: function() {
-            return [];
-          }
-        },
-
-        // We use this due to a limitation in IE10 where instances will have
-        // own properties of everything on the "prototype".
-        _imperativeKeyBindings: {
-          type: Object,
-          value: function() {
-            return {};
-          }
-        }
-      },
-
-      observers: [
-        '_resetKeyEventListeners(keyEventTarget, _boundKeyHandlers)'
-      ],
-
-
+    Polymer.IronA11yKeysBehavior = (superClass) => {
       /**
-       * To be used to express what combination of keys  will trigger the relative
-       * callback. e.g. `keyBindings: { 'esc': '_onEscPressed'}`
-       * @type {!Object}
-       */
-      keyBindings: {},
+      * @polymer
+      * @extends HTMLElement
+      */
+      return class extends superClass {
+        static get properties () {
+          return Object.assign({}, super.properties, {
+            /**
+            * The EventTarget that will be firing relevant KeyboardEvents. Set it to
+            * `null` to disable the listeners.
+            * @type {?EventTarget}
+            */
+            keyEventTarget: {
+              type: Object,
+              value: function() {
+                return this;
+              }
+            },
 
-      registered: function() {
-        this._prepKeyBindings();
-      },
+            /**
+            * If true, this property will cause the implementing element to
+            * automatically stop propagation on any handled KeyboardEvents.
+            */
+            stopKeyboardEventPropagation: {
+              type: Boolean,
+              value: false
+            },
 
-      attached: function() {
-        this._listenKeyEventListeners();
-      },
+            _boundKeyHandlers: {
+              type: Array,
+              value: function() {
+                return [];
+              }
+            },
 
-      detached: function() {
-        this._unlistenKeyEventListeners();
-      },
-
-      /**
-       * Can be used to imperatively add a key binding to the implementing
-       * element. This is the imperative equivalent of declaring a keybinding
-       * in the `keyBindings` prototype property.
-       *
-       * @param {string} eventString
-       * @param {string} handlerName
-       */
-      addOwnKeyBinding: function(eventString, handlerName) {
-        this._imperativeKeyBindings[eventString] = handlerName;
-        this._prepKeyBindings();
-        this._resetKeyEventListeners();
-      },
-
-      /**
-       * When called, will remove all imperatively-added key bindings.
-       */
-      removeOwnKeyBindings: function() {
-        this._imperativeKeyBindings = {};
-        this._prepKeyBindings();
-        this._resetKeyEventListeners();
-      },
-
-      /**
-       * Returns true if a keyboard event matches `eventString`.
-       *
-       * @param {KeyboardEvent} event
-       * @param {string} eventString
-       * @return {boolean}
-       */
-      keyboardEventMatchesKeys: function(event, eventString) {
-        var keyCombos = parseEventString(eventString);
-        for (var i = 0; i < keyCombos.length; ++i) {
-          if (keyComboMatchesEvent(keyCombos[i], event)) {
-            return true;
-          }
-        }
-        return false;
-      },
-
-      _collectKeyBindings: function() {
-        var keyBindings = this.behaviors.map(function(behavior) {
-          return behavior.keyBindings;
-        });
-
-        if (keyBindings.indexOf(this.keyBindings) === -1) {
-          keyBindings.push(this.keyBindings);
-        }
-
-        return keyBindings;
-      },
-
-      _prepKeyBindings: function() {
-        this._keyBindings = {};
-
-        this._collectKeyBindings().forEach(function(keyBindings) {
-          for (var eventString in keyBindings) {
-            this._addKeyBinding(eventString, keyBindings[eventString]);
-          }
-        }, this);
-
-        for (var eventString in this._imperativeKeyBindings) {
-          this._addKeyBinding(eventString, this._imperativeKeyBindings[eventString]);
-        }
-
-        // Give precedence to combos with modifiers to be checked first.
-        for (var eventName in this._keyBindings) {
-          this._keyBindings[eventName].sort(function (kb1, kb2) {
-            var b1 = kb1[0].hasModifiers;
-            var b2 = kb2[0].hasModifiers;
-            return (b1 === b2) ? 0 : b1 ? -1 : 1;
+            // We use this due to a limitation in IE10 where instances will have
+            // own properties of everything on the "prototype".
+            _imperativeKeyBindings: {
+              type: Object,
+              value: function() {
+                return {};
+              }
+            }
           })
         }
-      },
 
-      _addKeyBinding: function(eventString, handlerName) {
-        parseEventString(eventString).forEach(function(keyCombo) {
-          this._keyBindings[keyCombo.event] =
-            this._keyBindings[keyCombo.event] || [];
+        static get observers () {
+          return super.observers.concat([
+            '_resetKeyEventListeners(keyEventTarget, _boundKeyHandlers)'
+          ])
+        }
 
-          this._keyBindings[keyCombo.event].push([
-            keyCombo,
-            handlerName
-          ]);
-        }, this);
-      },
+        /**
+        * To be used to express what combination of keys  will trigger the relative
+        * callback. e.g. `keyBindings: { 'esc': '_onEscPressed'}`
+        * @type {!Object}
+        */
+        constructor () {
+          this.keyBindings = {}
+        }
 
-      _resetKeyEventListeners: function() {
-        this._unlistenKeyEventListeners();
+        registered () {
+          this._prepKeyBindings();
+        }
 
-        if (this.isAttached) {
+        connectedCallback () {
+          super.connectedCallback()
           this._listenKeyEventListeners();
         }
-      },
 
-      _listenKeyEventListeners: function() {
-        if (!this.keyEventTarget) {
-          return;
-        }
-        Object.keys(this._keyBindings).forEach(function(eventName) {
-          var keyBindings = this._keyBindings[eventName];
-          var boundKeyHandler = this._onKeyBindingEvent.bind(this, keyBindings);
-
-          this._boundKeyHandlers.push([this.keyEventTarget, eventName, boundKeyHandler]);
-
-          this.keyEventTarget.addEventListener(eventName, boundKeyHandler);
-        }, this);
-      },
-
-      _unlistenKeyEventListeners: function() {
-        var keyHandlerTuple;
-        var keyEventTarget;
-        var eventName;
-        var boundKeyHandler;
-
-        while (this._boundKeyHandlers.length) {
-          // My kingdom for block-scope binding and destructuring assignment..
-          keyHandlerTuple = this._boundKeyHandlers.pop();
-          keyEventTarget = keyHandlerTuple[0];
-          eventName = keyHandlerTuple[1];
-          boundKeyHandler = keyHandlerTuple[2];
-
-          keyEventTarget.removeEventListener(eventName, boundKeyHandler);
-        }
-      },
-
-      _onKeyBindingEvent: function(keyBindings, event) {
-        if (this.stopKeyboardEventPropagation) {
-          event.stopPropagation();
+        disconnectedCallback () {
+          super.disconnectedCallback()
+          this._unlistenKeyEventListeners();
         }
 
-        // if event has been already prevented, don't do anything
-        if (event.defaultPrevented) {
-          return;
+        /**
+        * Can be used to imperatively add a key binding to the implementing
+        * element. This is the imperative equivalent of declaring a keybinding
+        * in the `keyBindings` prototype property.
+        *
+        * @param {string} eventString
+        * @param {string} handlerName
+        */
+        addOwnKeyBinding (eventString, handlerName) {
+          this._imperativeKeyBindings[eventString] = handlerName;
+          this._prepKeyBindings();
+          this._resetKeyEventListeners();
         }
 
-        for (var i = 0; i < keyBindings.length; i++) {
-          var keyCombo = keyBindings[i][0];
-          var handlerName = keyBindings[i][1];
-          if (keyComboMatchesEvent(keyCombo, event)) {
-            this._triggerKeyHandler(keyCombo, handlerName, event);
-            // exit the loop if eventDefault was prevented
-            if (event.defaultPrevented) {
-              return;
+        /**
+        * When called, will remove all imperatively-added key bindings.
+        */
+        removeOwnKeyBindings () {
+          this._imperativeKeyBindings = {};
+          this._prepKeyBindings();
+          this._resetKeyEventListeners();
+        }
+
+        /**
+        * Returns true if a keyboard event matches `eventString`.
+        *
+        * @param {KeyboardEvent} event
+        * @param {string} eventString
+        * @return {boolean}
+        */
+        keyboardEventMatchesKeys (event, eventString) {
+          var keyCombos = parseEventString(eventString);
+          for (var i = 0; i < keyCombos.length; ++i) {
+            if (keyComboMatchesEvent(keyCombos[i], event)) {
+              return true;
+            }
+          }
+          return false;
+        }
+
+        _collectKeyBindings () {
+          var keyBindings = this.behaviors.map(function(behavior) {
+            return behavior.keyBindings;
+          });
+
+          if (keyBindings.indexOf(this.keyBindings) === -1) {
+            keyBindings.push(this.keyBindings);
+          }
+
+          return keyBindings;
+        }
+
+        _prepKeyBindings () {
+          this._keyBindings = {};
+
+          this._collectKeyBindings().forEach(function(keyBindings) {
+            for (var eventString in keyBindings) {
+              this._addKeyBinding(eventString, keyBindings[eventString]);
+            }
+          }, this);
+
+          for (var eventString in this._imperativeKeyBindings) {
+            this._addKeyBinding(eventString, this._imperativeKeyBindings[eventString]);
+          }
+
+          // Give precedence to combos with modifiers to be checked first.
+          for (var eventName in this._keyBindings) {
+            this._keyBindings[eventName].sort(function (kb1, kb2) {
+              var b1 = kb1[0].hasModifiers;
+              var b2 = kb2[0].hasModifiers;
+              return (b1 === b2) ? 0 : b1 ? -1 : 1;
+            })
+          }
+        }
+
+        _addKeyBinding (eventString, handlerName) {
+          parseEventString(eventString).forEach(function(keyCombo) {
+            this._keyBindings[keyCombo.event] =
+              this._keyBindings[keyCombo.event] || [];
+
+            this._keyBindings[keyCombo.event].push([
+              keyCombo,
+              handlerName
+            ]);
+          }, this);
+        }
+
+        _resetKeyEventListeners () {
+          this._unlistenKeyEventListeners();
+
+          if (this.isAttached) {
+            this._listenKeyEventListeners();
+          }
+        }
+
+        _listenKeyEventListeners () {
+          if (!this.keyEventTarget) {
+            return;
+          }
+          Object.keys(this._keyBindings).forEach(function(eventName) {
+            var keyBindings = this._keyBindings[eventName];
+            var boundKeyHandler = this._onKeyBindingEvent.bind(this, keyBindings);
+
+            this._boundKeyHandlers.push([this.keyEventTarget, eventName, boundKeyHandler]);
+
+            this.keyEventTarget.addEventListener(eventName, boundKeyHandler);
+          }, this);
+        }
+
+        _unlistenKeyEventListeners () {
+          var keyHandlerTuple;
+          var keyEventTarget;
+          var eventName;
+          var boundKeyHandler;
+
+          while (this._boundKeyHandlers.length) {
+            // My kingdom for block-scope binding and destructuring assignment..
+            keyHandlerTuple = this._boundKeyHandlers.pop();
+            keyEventTarget = keyHandlerTuple[0];
+            eventName = keyHandlerTuple[1];
+            boundKeyHandler = keyHandlerTuple[2];
+
+            keyEventTarget.removeEventListener(eventName, boundKeyHandler);
+          }
+        }
+
+        _onKeyBindingEvent (keyBindings, event) {
+          if (this.stopKeyboardEventPropagation) {
+            event.stopPropagation();
+          }
+
+          // if event has been already prevented, don't do anything
+          if (event.defaultPrevented) {
+            return;
+          }
+
+          for (var i = 0; i < keyBindings.length; i++) {
+            var keyCombo = keyBindings[i][0];
+            var handlerName = keyBindings[i][1];
+            if (keyComboMatchesEvent(keyCombo, event)) {
+              this._triggerKeyHandler(keyCombo, handlerName, event);
+              // exit the loop if eventDefault was prevented
+              if (event.defaultPrevented) {
+                return;
+              }
             }
           }
         }
-      },
 
-      _triggerKeyHandler: function(keyCombo, handlerName, keyboardEvent) {
-        var detail = Object.create(keyCombo);
-        detail.keyboardEvent = keyboardEvent;
-        var event = new CustomEvent(keyCombo.event, {
-          detail: detail,
-          cancelable: true
-        });
-        this[handlerName].call(this, event);
-        if (event.defaultPrevented) {
-          keyboardEvent.preventDefault();
+        _triggerKeyHandler (keyCombo, handlerName, keyboardEvent) {
+          var detail = Object.create(keyCombo);
+          detail.keyboardEvent = keyboardEvent;
+          var event = new CustomEvent(keyCombo.event, {
+            detail: detail,
+            cancelable: true
+          });
+          this[handlerName].call(this, event);
+          if (event.defaultPrevented) {
+            keyboardEvent.preventDefault();
+          }
         }
       }
-    };
+    }
   })();
 </script>
